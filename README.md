@@ -157,15 +157,10 @@ App will run at:
 
 📸 Screenshots
 <img width="959" height="438" alt="f1" src="https://github.com/user-attachments/assets/fc52654c-ae99-48f0-9ff8-a7ced3120eb8" />
-
 <img width="947" height="439" alt="f2" src="https://github.com/user-attachments/assets/41b6d8e8-54c0-4679-9469-7758811545ff" />
-
 <img width="959" height="436" alt="f3" src="https://github.com/user-attachments/assets/81893da8-12e6-4acb-9bd2-61095bd8ba73" />
-
 <img width="947" height="439" alt="f4" src="https://github.com/user-attachments/assets/7bd7cd53-755d-42b3-9b7e-2745626f8e41" />
-
 <img width="946" height="439" alt="f5" src="https://github.com/user-attachments/assets/55d79625-bbe1-4b32-ac44-78a3aaf4ed7a" />
-
 <img width="941" height="431" alt="f6" src="https://github.com/user-attachments/assets/3cc7be19-7746-4bae-88b3-8d2e6ac4ea3b" />
 
 📈 Future Enhancements

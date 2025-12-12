@@ -631,3 +631,44 @@ a:hover{ color: var(--accent-2); }
   border: none !important;
 }
 
+/* Navbar new-post button */
+.nav-inline .new-post-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 8px 20px rgba(37,99,235,0.12);
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  min-height: 40px;
+}
+
+/* icon inside new-post (svg) */
+.nav-inline .new-post-btn svg { display:inline-block; vertical-align:middle; }
+
+/* small label hides on narrow screens */
+.nav-inline .new-post-btn .small-label { display:inline-block; font-size:0.95rem; }
+
+/* hover effect */
+.nav-inline .new-post-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 36px rgba(37,99,235,0.16);
+  opacity: 0.98;
+}
+
+/* Ensure visibility in dark theme */
+:root[data-theme='dark'] .nav-inline .new-post-btn {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.6);
+}
+
+/* On very small screens, collapse the label to save space */
+@media (max-width: 520px) {
+  .nav-inline .new-post-btn { padding: 8px; }
+  .nav-inline .new-post-btn .small-label { display: none; }
+}
+

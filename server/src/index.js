@@ -5,65 +5,103 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 
+// Routes
 const authRoutes = require("./routes/auth");
 const postRoutes = require("./routes/posts");
 const usersRoutes = require("./routes/users");
 
 const app = express();
 
-/* ---------- middleware ---------- */
+/* ======================================================
+   MIDDLEWARE
+====================================================== */
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-/* ---------- CORS ---------- */
-/* allow localhost dev and any deployed frontends (adjust/lock down for prod) */
+/* ======================================================
+   CORS — STABLE FOR LOCAL + RENDER + PROD
+====================================================== */
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  process.env.CLIENT_ORIGIN || "" // optionally set CLIENT_ORIGIN in env for production
+  process.env.CLIENT_ORIGIN // e.g. https://frontend.onrender.com
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // allow requests with no origin (e.g. curl, mobile)
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    // default reject — in production add your real origin
-    return cb(new Error("Not allowed by CORS"));
-  },
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow server-to-server, Postman, mobile apps
+      if (!origin) return callback(null, true);
 
-/* ---------- serve uploaded static files (server/uploads) ---------- */
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
 
-/* ---------- DB ---------- */
+      console.error(" CORS blocked:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+  })
+);
+
+/* ======================================================
+   STATIC FILES (UPLOADED MEDIA)
+====================================================== */
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "..", "uploads"))
+);
+
+/* ======================================================
+   DATABASE CONNECTION
+====================================================== */
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/blog_app";
+const MONGO_URI =
+  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/blog_app";
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connect error:", err));
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  });
 
-/* ---------- basic health route ---------- */
-app.get("/", (req, res) => res.send("Blog API running"));
+/* ======================================================
+   HEALTH CHECK
+====================================================== */
+app.get("/", (req, res) => {
+  res.send("🚀 Blog API running");
+});
 
-/* ---------- API routes (mount order matters) ---------- */
+/* ======================================================
+   API ROUTES
+====================================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/users", usersRoutes);
 
-/* ---------- error handler (simple) ---------- */
+/* ======================================================
+   GLOBAL ERROR HANDLER
+====================================================== */
 app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
-  // if CORS rejected, send 403 with message
-  if (err && err.message && err.message.includes("CORS")) {
+  console.error(" Server Error:", err.message);
+
+  // CORS specific error
+  if (err.message?.includes("CORS")) {
     return res.status(403).json({ message: err.message });
   }
-  res.status(err.status || 500).json({ message: err.message || "Server error" });
+
+  res.status(err.status || 500).json({
+    message: err.message || "Internal server error"
+  });
 });
 
-/* ---------- start server ---------- */
+/* ======================================================
+   START SERVER
+====================================================== */
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

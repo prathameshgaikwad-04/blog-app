@@ -5,24 +5,59 @@ import PostForm from "../components/PostForm";
 
 const EditPost = () => {
   const { id } = useParams();
-  const [initial,setInitial] = useState(null);
-  const [loading,setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(()=>{ const fetchPost = async ()=>{ try{ const res = await api.get(`/posts/${id}`); setInitial({ title: res.data.title, body: res.data.body, media: res.data.media || [] }); }catch(err){ console.error(err); } finally{ setLoading(false); } }; fetchPost(); },[id]);
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleUpdate = async (data) => { try{ await api.put(`/posts/${id}`, data); navigate(`/posts/${id}`); }catch(err){ alert(err.response?.data?.message || 'Failed to update post'); } };
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const res = await api.get(`/posts/${id}`);
+        setPost(res.data);
+      } catch (err) {
+        console.error("Failed to load post", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPost();
+  }, [id]);
 
-  if(loading) return <p>Loading...</p>;
-  if(!initial) return <p>Post not found</p>;
+  const handleUpdate = async ({ title, body, file }) => {
+    try {
+      setSaving(true);
+
+      const fd = new FormData();
+      fd.append("title", title);
+      fd.append("body", body);
+      if (file) fd.append("avatar", file); // 🔑 same field name
+
+      await api.put(`/posts/${id}`, fd);
+
+      navigate(`/posts/${id}`);
+    } catch (err) {
+      console.error("Update failed", err);
+      alert("Failed to update post");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (!post) return <p>Post not found</p>;
 
   return (
-    <div>
-      <h2>Edit Post</h2>
-      <PostForm initialValues={initial} onSubmit={handleUpdate} submitLabel={'Send'} />
-    </div>
+    <PostForm
+      initialPost={post}   // ✅ THIS WAS MISSING
+      onSubmit={handleUpdate}
+      loading={saving}
+      mode="edit"
+    />
   );
 };
 
 export default EditPost;
+
 

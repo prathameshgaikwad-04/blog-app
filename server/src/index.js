@@ -8,8 +8,6 @@ const path = require("path");
 const authRoutes = require("./routes/auth");
 const postRoutes = require("./routes/posts");
 const usersRoutes = require("./routes/users");
-// new upload route
-const uploadRoutes = require("./routes/upload");
 
 const app = express();
 
@@ -54,9 +52,6 @@ app.get("/", (req, res) => res.send("Blog API running"));
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/users", usersRoutes);
-
-// upload route: POST /api/avatar/upload
-app.use("/api/avatar", uploadRoutes);
 
 /* ---------- error handler (simple) ---------- */
 app.use((err, req, res, next) => {

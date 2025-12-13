@@ -1,56 +1,161 @@
-import React, { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-const wrapSelection = (el, pre, suf) => {
-  const s = el.selectionStart, e = el.selectionEnd;
-  const t = el.value;
-  el.value = t.slice(0,s) + pre + t.slice(s,e) + suf + t.slice(e);
-  el.selectionStart = s + pre.length; el.selectionEnd = s + pre.length + (e - s);
-  el.focus();
-};
+/* base URL for uploaded media */
+const MEDIA_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-export default function PostForm({ initialValues = {title:"", body:"", media:[]}, onSubmit, submitLabel="Send" }){
-  const [title,setTitle]=useState(initialValues.title);
-  const [body,setBody]=useState(initialValues.body);
-  const [media,setMedia]=useState(initialValues.media || []);
-  const ta = useRef();
+const PostForm = ({
+  initialPost,
+  onSubmit,
+  loading = false,
+  mode = "create"
+}) => {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [file, setFile] = useState(null);
+  const [existingMedia, setExistingMedia] = useState([]);
 
-  const handleFile = async (e) => {
-    const files = Array.from(e.target.files || []);
-    const converted = await Promise.all(files.map(f=> new Promise((res,rej)=>{
-      const r = new FileReader(); r.onload = ()=> res({ data: r.result, mimeType: f.type }); r.onerror=rej; r.readAsDataURL(f);
-    })));
-    setMedia(prev => [...prev, ...converted]);
+  /* ---------- preload post data (EDIT MODE) ---------- */
+  useEffect(() => {
+    if (!initialPost) return;
+
+    setTitle(initialPost.title || "");
+    setBody(initialPost.body || "");
+
+    if (Array.isArray(initialPost.media)) {
+      // normalize legacy + new media formats
+      const normalized = initialPost.media
+        .map((m) => {
+          // legacy string
+          if (typeof m === "string") {
+            return { url: m, mimeType: null };
+          }
+          // new object format
+          if (m && typeof m === "object" && m.url) {
+            return m;
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      setExistingMedia(normalized);
+    } else {
+      setExistingMedia([]);
+    }
+  }, [initialPost]);
+
+  /* ---------- submit handler ---------- */
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit({ title, body, file });
   };
 
-  const removeMedia = (i)=> setMedia(prev=> prev.filter((_,idx)=> idx!==i));
-
   return (
-    <form onSubmit={(ev)=> { ev.preventDefault(); onSubmit({ title, body, media }); }}>
-      <div className="form-field">
-        <label>Title</label>
-        <input className="input" value={title} onChange={e=>setTitle(e.target.value)} required />
-      </div>
-      <div className="form-field">
-        <label style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>Body
-          <div className="format-toolbar">
-            <button type="button" className="format-btn" onClick={()=> { wrapSelection(ta.current, "**", "**"); setBody(ta.current.value); }}>B</button>
-            <button type="button" className="format-btn" onClick={()=> { wrapSelection(ta.current, "_", "_"); setBody(ta.current.value); }}>I</button>
-            <button type="button" className="format-btn" onClick={()=> { wrapSelection(ta.current, "<u>", "</u>"); setBody(ta.current.value); }}>U</button>
+    <form className="main-card" onSubmit={handleSubmit}>
+      <h2>{mode === "edit" ? "Edit Post" : "Create Post"}</h2>
+
+      {/* ---------- TITLE ---------- */}
+      <label>Title</label>
+      <input
+        className="input"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        required
+        disabled={loading}
+      />
+
+      {/* ---------- BODY ---------- */}
+      <label style={{ marginTop: 12 }}>Body</label>
+      <textarea
+        className="input"
+        rows={8}
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        disabled={loading}
+      />
+
+      {/* ---------- EXISTING MEDIA (EDIT MODE) ---------- */}
+      {existingMedia.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <p className="small">Current media:</p>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {existingMedia.map((m, i) => {
+              const fullUrl = `${MEDIA_BASE}${m.url}`;
+              const lower = m.url.toLowerCase();
+
+              const isImage =
+                m.mimeType?.startsWith("image/") ||
+                /\.(jpg|jpeg|png|gif|webp)$/.test(lower);
+
+              const isVideo =
+                m.mimeType?.startsWith("video/") ||
+                /\.(mp4|webm|ogg)$/.test(lower);
+
+              if (isImage) {
+                return (
+                  <img
+                    key={i}
+                    src={fullUrl}
+                    alt="existing media"
+                    style={{
+                      maxWidth: 220,
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.12)"
+                    }}
+                  />
+                );
+              }
+
+              if (isVideo) {
+                return (
+                  <video
+                    key={i}
+                    src={fullUrl}
+                    controls
+                    style={{
+                      maxWidth: 220,
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.12)"
+                    }}
+                  />
+                );
+              }
+
+              return null;
+            })}
           </div>
-        </label>
-        <textarea ref={ta} className="input" rows={8} value={body} onChange={e=>setBody(e.target.value)} required />
-      </div>
+        </div>
+      )}
 
-      <div className="form-field">
-        <label>Multimedia</label>
-        <input type="file" accept="image/*,video/*" multiple onChange={handleFile} />
-        <div className="media-preview">{media.map((m,i)=> (<div key={i} style={{position:"relative"}}>{ m.mimeType.startsWith("image")? <img src={m.data} alt="" /> : <video src={m.data} controls/> }<button type="button" onClick={()=> removeMedia(i)}>x</button></div>))}</div>
-      </div>
+      {/* ---------- FILE INPUT ---------- */}
+      <label style={{ marginTop: 14 }}>
+        {existingMedia.length > 0
+          ? "Replace image / video (optional)"
+          : "Add image or video (optional)"}
+      </label>
 
-      <div style={{display:"flex",gap:8}}><button className="primary" type="submit">{submitLabel}</button></div>
+      <input
+        type="file"
+        accept="image/*,video/*"
+        disabled={loading}
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+      />
+
+      {/* ---------- ACTIONS ---------- */}
+      <div style={{ marginTop: 16 }}>
+        <button className="primary" type="submit" disabled={loading}>
+          {loading ? "Saving..." : "Save"}
+        </button>
+      </div>
     </form>
   );
-}
+};
+
+export default PostForm;
+
+
+
 
 
 
